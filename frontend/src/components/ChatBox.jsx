@@ -2,7 +2,7 @@ import 'regenerator-runtime/runtime';
 import React, { useEffect, useState } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
+import { FaMicrophone, FaMicrophoneSlash, FaVolumeMute, FaVolumeUp , FaUser, FaRobot, } from 'react-icons/fa';
 import {
   ChakraProvider,
   Box,
@@ -16,14 +16,17 @@ import {
   useBreakpointValue,
   Flex
 } from '@chakra-ui/react';
+import {} from 'dotenv'
 
 const samplePrompts = [
-  'Tell me a joke.',
-  'What’s the weather like today?',
+  'What is react?.',
+  'What is Node.js?',
+  'How to make resume better?',
   'Give me a motivational quote.',
   'How do I learn JavaScript?',
   'What are the benefits of meditation?',
-  'Tell me an interesting fact.'
+  'Tell me an interesting fact.',
+
 ];
 
 const ChatBox = () => {
@@ -31,23 +34,33 @@ const ChatBox = () => {
   const [thinking, setThinking] = useState(false);
   const [aiText, setAiText] = useState('');
   const [error, setError] = useState('');
-  const [history, setHistory] = useState([]); // State to store conversation history
+  const [history, setHistory] = useState([]); 
+  const [isMuted, setIsMuted] = useState(false); 
 
-  // Initialize Gemini AI client with your API key
-  const genAI = new GoogleGenerativeAI('AIzaSyAcyhGmgg11vfqlXjkiW3dqmOVjlHTTzUc'); // Replace with your API key
+  // Initializing Gemini AI 
+  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API); 
+  
+
 
   const callGeminiAI = async (message) => {
     setThinking(true);
     setError('');
     try {
+      
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const result = await model.generateContent(message);
       const responseText = result.response.text();
       setThinking(false);
 
-      // Update conversation history
+     
       const newHistory = { user: message, bot: responseText };
       setHistory((prevHistory) => [...prevHistory, newHistory]);
+
+      // Start speaking the AI's response unless muted
+      if (!isMuted) {
+        const utterance = new SpeechSynthesisUtterance(responseText);
+        window.speechSynthesis.speak(utterance);
+      }
 
       return responseText;
     } catch (err) {
@@ -66,11 +79,27 @@ const ChatBox = () => {
     SpeechRecognition.stopListening();
   };
 
-  // Handle prompt card click
+  // Handling prompt card click
   const handlePromptClick = (prompt) => {
     callGeminiAI(prompt);
   };
 
+  const handleMuteToggle = () => {
+    setIsMuted((prevState) => {
+      
+      if (!prevState) {
+        window.speechSynthesis.cancel();
+      } else {
+
+        if (aiText) {
+          const utterance = new SpeechSynthesisUtterance(aiText);
+          window.speechSynthesis.speak(utterance);
+        }
+      }
+      return !prevState;
+    });
+  };
+  
   const flexDirection = useBreakpointValue({ base: 'column', md: 'row' });
   const cardFlex = useBreakpointValue({ base: 'none', md: '1' });
   const chatBoxFlex = useBreakpointValue({ base: 'none', md: '3' });
@@ -78,22 +107,25 @@ const ChatBox = () => {
   useEffect(() => {
     let timeoutId;
     if (!listening && transcript) {
-      // Wait for 2 seconds before triggering the response
+     
       timeoutId = setTimeout(() => {
         callGeminiAI(transcript).then((response) => {
           if (response) {
-            const speechSynthesis = window.speechSynthesis;
-            const utterance = new SpeechSynthesisUtterance(response);
-            speechSynthesis.speak(utterance);
+            
+            if (!isMuted) {
+              const speechSynthesis = window.speechSynthesis;
+              const utterance = new SpeechSynthesisUtterance(response);
+              speechSynthesis.speak(utterance);
+            }
             setAiText(response);
-            resetTranscript(); // Clear transcript once response starts
+            resetTranscript(); 
           }
         });
       }, 2000);
     }
 
-    return () => clearTimeout(timeoutId); // Clean up the timeout if the component unmounts
-  }, [transcript, listening]);
+    return () => clearTimeout(timeoutId);
+  }, [transcript, listening, isMuted]);
 
   if (!browserSupportsSpeechRecognition) {
     return <p>Your browser doesn't support speech recognition.</p>;
@@ -107,7 +139,6 @@ const ChatBox = () => {
         p={4}
         gap={4}
         width={'100vw'}
-        
       >
         {/* Prompt Cards */}
         <Box
@@ -141,36 +172,79 @@ const ChatBox = () => {
         
         {/* Chat Box */}
         <Box
-          
           flex={chatBoxFlex}
           position="relative"
           p={6}
-          boxShadow="lg"
-          borderRadius="lg"
+         
           bg="gray.50"
           minW="70%"
         >
-          <VStack spacing={4} height="60%" overflowY="auto" bg="gray.100" borderRadius="md" p={4} width="100%">
-            <Heading as="h3" size="md" textAlign="center">
-              Conversation History
-            </Heading>
-            {history.map((entry, index) => (
-              <React.Fragment key={index}>
-                <Box alignSelf="flex-end" p={4} bg="blue.100" borderRadius="md" boxShadow="sm" maxWidth="70%">
-                  <Text><strong>You:</strong> {entry.user}</Text>
-                </Box>
-                <Box alignSelf="flex-start" p={4} bg="green.100" borderRadius="md" boxShadow="sm" maxWidth="70%" mt={2}>
-                  <Text><strong>Bot:</strong> {entry.bot}</Text>
-                </Box>
-              </React.Fragment>
-            ))}
-          </VStack>
+<VStack spacing={4} height="78%" overflowY="auto" bg="gray.100" borderRadius="md" p={4} width="100%">
+  <Heading as="h3" size="md" textAlign="center">
+    Conversation History
+  </Heading>
+  {history.map((entry, index) => (
+    <React.Fragment key={index}>
+      {/* User Message */}
+      <Box
+        alignSelf="flex-end"
+        p={4}
+        bg="blue.100"
+        borderRadius="md"
+        boxShadow="sm"
+        maxWidth="60%"
+        display="flex"
+        alignItems="center"
+      >
+        {/* Person Icon */}
+        <FaUser style={{ marginRight: '8px' }} />
+        <Text><strong>You:</strong> {entry.user}</Text>
+      </Box>
+      
+      {/* Bot Message */}
+      <Box
+        alignSelf="flex-start"
+        p={4}
+        bg="green.100"
+        borderRadius="md"
+        boxShadow="sm"
+        maxWidth="60%"
+        mt={2}
+        position="relative"
+        display="flex"
+        alignItems="center"
+      >
+        {/* Bot Icon */}
+        <FaRobot style={{ marginRight: '8px' }} />
+        <Text><strong>Bot:</strong> {entry.bot}</Text>
 
+        {/* Mute/Unmute Icon Button */}
+        <Button
+          onClick={() => {
+            if (!isMuted) {
+              window.speechSynthesis.cancel();
+            } else {
+              const utterance = new SpeechSynthesisUtterance(entry.bot);
+              window.speechSynthesis.speak(utterance);
+            }
+            setIsMuted(!isMuted);
+          }}
+        //  minH={'100px'}
+        //  minW={'100px'}
+          // size="sm"
+          variant="ghost"
+        >
+          {isMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
+        </Button>
+      </Box>
+    </React.Fragment>
+  ))}
+</VStack>
           <Divider my={4} />
 
           <VStack spacing={4}>
 
-          {transcript && (
+            {transcript && (
               <Box p={4} bg="gray.200" borderRadius="md" width="100%">
                 <Text><strong>Your question:</strong> {transcript}</Text>
               </Box>
@@ -182,39 +256,42 @@ const ChatBox = () => {
               </Box>
             )}
 
-            <HStack spacing={4}  >
-              <Button colorScheme="blue" onClick={startListening} leftIcon={<FaMicrophone />}>
-                Start Listening
-              </Button>
-              <Button colorScheme="red" onClick={stopListening} leftIcon={<FaMicrophoneSlash />}>
-                Generate
-              </Button>
-            </HStack>
 
-            {listening ? (
-              <Text fontSize="lg" color="green.500">
-                Go ahead, I'm listening...
-              </Text>
-            ) : (
-              <Text fontSize="lg" color="blue.500">
-                Click the button and ask a question.
-              </Text>
-            )}
-
-            {thinking && (
-              <HStack>
-                <Spinner size="md" color="blue.500" />
-                <Text fontSize="lg">Thinking...</Text>
+              <HStack spacing={4}>
+                <Button backgroundColor={'#1a202c'} color={'white'} onClick={startListening} leftIcon={<FaMicrophone />}>
+                  Start Listening
+                </Button>
+                <Button backgroundColor={'#1a202c'} color={'white'} onClick={stopListening} leftIcon={<FaMicrophoneSlash />}>
+                  Generate
+                </Button>
+                <Button onClick={handleMuteToggle} leftIcon={isMuted ? <FaVolumeMute /> : <FaVolumeUp />}>
+                  {isMuted ? 'Unmute' : 'Mute'}
+                </Button>
               </HStack>
-            )}
 
-            {error && (
-              <Text fontSize="lg" color="red.500">
-                {error}
-              </Text>
-            )}
+              {listening ? (
+                <Text textAlign={'center'}  color="green.500">
+                  Go ahead, I'm listening...
+                </Text>
+              ) : (
+                <Text  textAlign={'center'} color="blue.500">
+                  Click the button and ask a question.
+                </Text>
+              )}
 
-           
+              {thinking && (
+                <HStack>
+                  <Spinner size="md" color="blue.500" />
+                  <Text fontSize="lg">Thinking...</Text>
+                </HStack>
+              )}
+
+              {error && (
+                <Text fontSize="lg" color="red.500">
+                  {error}
+                </Text>
+              )}
+
           </VStack>
         </Box>
       </Flex>
@@ -223,3 +300,5 @@ const ChatBox = () => {
 };
 
 export default ChatBox;
+
+
