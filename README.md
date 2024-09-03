@@ -11,31 +11,7 @@ Frontend: https://voice-chatbot-omega.vercel.app/
 
 ## Directory Structure
 
-voice_chatbot/
-│
-├── frontend/
-│   ├── node_modules/
-│   ├── public/
-│   │   └── vite.svg
-│   └── src/
-│       ├── assets/
-│       └── components/
-│           ├── ChatBox.jsx
-│           ├── ChatWindow.jsx
-│       ├── App.css
-│       ├── App.jsx
-│       ├── index.css
-│       └── main.jsx
-├── .env
-├── .gitignore
-├── eslint.config.js
-├── index.html
-├── package-lock.json
-├── package.json
-├── README.md
-├── vite.config.js
-└── directoryTree.js
-
+ ![image](https://github.com/user-attachments/assets/5b71ad02-eaf5-4331-ace0-5e1245187e4a)
 
 
 ## Video Walkthrough of the project
